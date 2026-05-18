@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { compileHistoryPrompt, compileSplitPrompt } from "../extensions/continue/src/prompt.ts";
+import { compileFormatPrompt, compileHistoryPrompt, compileSplitPrompt } from "../extensions/continue/src/prompt.ts";
 
 test("compileHistoryPrompt includes runtime sections and provenance", () => {
 	const prompt = compileHistoryPrompt(
@@ -34,6 +34,32 @@ test("compileHistoryPrompt includes runtime sections and provenance", () => {
 		baseUser: "/pkg/base.md",
 		scenarioUser: "/pkg/scenario.md",
 	});
+});
+
+test("compileFormatPrompt includes ledger text and metadata", () => {
+	const prompt = compileFormatPrompt(
+		{
+			system: { content: "format system", sourcePath: "/pkg/format-system.md" },
+			scenarioUser: { content: "format user", sourcePath: "/pkg/format-user.md" },
+		},
+		{
+			ledgerText: "ledger text",
+			projectRoot: "/repo",
+			continuationDocPath: "/repo/CONTINUE.md",
+			existingContinuationDoc: "old doc",
+			agentGuidePath: "/repo/AGENTS.md",
+			existingAgentGuide: "agent guide",
+			customInstructions: "focus here",
+			fileOps: { readFiles: ["/repo/a.ts"], modifiedFiles: ["/repo/b.ts"] },
+		},
+	);
+	assert.equal(prompt.systemPrompt, "format system");
+	assert.match(prompt.userPrompt, /<continuation-ledger>[\s\S]*ledger text/);
+	assert.match(prompt.userPrompt, /<continuation-doc-path>[\s\S]*\/repo\/CONTINUE\.md/);
+	assert.match(prompt.userPrompt, /<existing-agent-guide>[\s\S]*agent guide/);
+	assert.match(prompt.userPrompt, /<file-operations>[\s\S]*<modified-files>[\s\S]*\/repo\/b.ts/);
+	assert.equal(prompt.sources.system, "/pkg/format-system.md");
+	assert.equal(prompt.sources.scenarioUser, "/pkg/format-user.md");
 });
 
 test("compileSplitPrompt includes split transcript", () => {

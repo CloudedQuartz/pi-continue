@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { HistoryScenario, HistoryPromptAssets, LoadedPromptAsset, PromptOverridePolicy, SplitPromptAssets } from "./types.ts";
+import type { FormatPromptAssets, HistoryScenario, HistoryPromptAssets, LoadedPromptAsset, PromptOverridePolicy, SplitPromptAssets } from "./types.ts";
 import { resolveAgentDir } from "./agent-dir.ts";
 
 const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -66,5 +66,13 @@ export function loadSplitPromptAssets(projectRoot: string, policy: PromptOverrid
 	return {
 		system: loadPromptAsset(projectRoot, policy, "system/split_prefix.md"),
 		scenarioUser: loadPromptAsset(projectRoot, policy, "user/split_prefix.md"),
+	};
+}
+
+/** Resolve the asset set for the artifact-formatting pass. */
+export function loadFormatPromptAssets(projectRoot: string, policy: PromptOverridePolicy): FormatPromptAssets {
+	return {
+		system: loadPromptAsset(projectRoot, policy, "system/format_artifact.md"),
+		scenarioUser: loadPromptAsset(projectRoot, policy, "user/format_artifact.md"),
 	};
 }

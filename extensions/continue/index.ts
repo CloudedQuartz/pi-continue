@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { loadHistoryPromptAssets, loadSplitPromptAssets } from "./src/assets.ts";
+import { loadFormatPromptAssets, loadHistoryPromptAssets, loadSplitPromptAssets } from "./src/assets.ts";
 import { parseHistoryArtifacts, parseSplitPrefix } from "./src/blocks.ts";
 import { splitContinueSubcommand, shouldOpenContinuePalette } from "./src/command-shape.ts";
 import { runContinuePaletteResult, runEnabledContinuationCommand } from "./src/command-runner.ts";
@@ -27,7 +27,7 @@ import { buildLedgerSnapshot, showContinuationLedgerOverlaySoon } from "./src/le
 import { runMidRunGuard } from "./src/mid-run-guard.ts";
 import { resolveTokenBudget, runPromptPass } from "./src/model.ts";
 import { loadPiInternals } from "./src/pi-internals.ts";
-import { compileHistoryPrompt, compileSplitPrompt } from "./src/prompt.ts";
+import { compileFormatPrompt, compileHistoryPrompt, compileSplitPrompt } from "./src/prompt.ts";
 import { resolveProjectContext, writeRepoDocument } from "./src/project.ts";
 import { isContinuationPromptUserMessage } from "./src/prompt-dispatch.ts";
 import { showContinuePalette } from "./src/palette.ts";
@@ -243,6 +243,7 @@ export default function (pi: ExtensionAPI) {
 			config.splitPrefixMaxTokens,
 			"split",
 		);
+		const formatBudget = Math.min(8192, Math.floor(0.2 * preparation.settings.reserveTokens));
 		let historyArtifacts: ParsedHistoryArtifacts;
 		let splitPrefix: string | undefined;
 		let synthesis: ContinuationSynthesisTelemetry | undefined;
@@ -256,12 +257,31 @@ export default function (pi: ExtensionAPI) {
 			const splitOutput = splitResult.status === "fulfilled" ? splitResult.value : undefined;
 			synthesis = buildContinuationSynthesisTelemetry(historyOutput, splitOutput);
 			recordActiveSynthesisTelemetry(runtime, synthesis);
-			if (historyResult.status === "rejected") throw new SynthesisStageError("history-model", "History summarizer pass failed.");
+			if (historyResult.status === "rejected") throw new SynthesisStageError("history-model", "History ledger pass failed.");
 			if (splitResult.status === "rejected") throw new SynthesisStageError("split-model", "Split-prefix summarizer pass failed.");
-			if (!historyOutput) throw new SynthesisStageError("history-model", "History summarizer pass omitted a response.");
-			const parsedHistoryArtifacts = parseHistoryArtifacts(historyOutput.text);
+			if (!historyOutput) throw new SynthesisStageError("history-model", "History ledger pass omitted a response.");
+			const formatPrompt = compileFormatPrompt(
+				loadFormatPromptAssets(resolvedProjectContext.projectRoot, config.promptOverridePolicy),
+				{
+					ledgerText: historyOutput.text,
+					projectRoot: resolvedProjectContext.projectRoot,
+					continuationDocPath: resolvedProjectContext.continuationDocPath,
+					existingContinuationDoc: resolvedProjectContext.existingContinuationDoc,
+					agentGuidePath: resolvedProjectContext.agentGuidePath,
+					existingAgentGuide: resolvedProjectContext.existingAgentGuide,
+					customInstructions: event.customInstructions,
+					fileOps: fileOpsSnapshot,
+				},
+			);
+			let formatOutput;
+			try {
+				formatOutput = await runPromptPass(pi, ctx, config, formatPrompt, formatBudget, event.signal);
+			} catch {
+				throw new SynthesisStageError("format-model", "Formatter pass failed.");
+			}
+			const parsedHistoryArtifacts = parseHistoryArtifacts(formatOutput.text);
 			if (!parsedHistoryArtifacts) {
-				throw new SynthesisStageError("history-artifact", "History pass omitted required pi-continue JSON artifacts.");
+				throw new SynthesisStageError("format-artifact", "Formatter pass omitted required pi-continue JSON artifacts.");
 			}
 			historyArtifacts = parsedHistoryArtifacts;
 			if (splitPrompt) {

@@ -8,10 +8,12 @@ import { loadPromptAsset } from "../extensions/continue/src/assets.ts";
 const promptAssetPaths = [
 	"assets/system/history_initial.md",
 	"assets/system/history_update.md",
+	"assets/system/format_artifact.md",
 	"assets/system/split_prefix.md",
 	"assets/user/continuation_base.md",
 	"assets/user/history_initial.md",
 	"assets/user/history_update.md",
+	"assets/user/format_artifact.md",
 	"assets/user/split_prefix.md",
 ];
 const numericReadQuotaPattern = /(?:(?:read|source|file|context|contextMap|bullet|item|entry)s?.{0,24}(?:at most|up to|no more than|maximum|max).{0,16}(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten))|(?:(?:at most|up to|no more than|maximum|max).{0,16}(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten).{0,24}(?:read|source|file|context|contextMap|bullet|item|entry)s?)/i;
@@ -57,13 +59,23 @@ test("package history prompts require evidence-gated continuation ledger artifac
 	for (const path of ["assets/system/history_initial.md", "assets/system/history_update.md"]) {
 		const content = readFileSync(path, "utf8");
 		assert.match(content, /pi-continue-artifacts\/v3/);
-		assert.match(content, /valid JSON/);
+		assert.match(content, /not JSON/);
 		assert.match(content, /noisy evidence, not content to replay/);
 		assert.match(content, /Drop provenance-only details/);
 		assert.match(content, /Generalize repeated friction/);
 		assert.match(content, /Do not append another stacked ledger layer/);
 		assert.match(content, /older await-direction state/);
 		assert.match(content, /agent guide/);
+	}
+});
+
+test("formatter prompts require strict v3 JSON artifacts", () => {
+	for (const path of ["assets/system/format_artifact.md", "assets/user/format_artifact.md"]) {
+		const content = readFileSync(path, "utf8");
+		assert.match(content, /pi-continue-artifacts\/v3/);
+		assert.match(content, /JSON/);
+		assert.match(content, /recencyLedger/);
+		assert.match(content, /agentGuideChangeReason/);
 	}
 });
 

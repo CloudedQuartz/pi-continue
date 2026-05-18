@@ -54,6 +54,11 @@ export interface SplitPromptAssets {
 	scenarioUser: LoadedPromptAsset;
 }
 
+export interface FormatPromptAssets {
+	system: LoadedPromptAsset;
+	scenarioUser: LoadedPromptAsset;
+}
+
 export interface FileOpsSnapshot {
 	readFiles: string[];
 	modifiedFiles: string[];
@@ -79,6 +84,17 @@ export interface SplitPromptInput {
 	customInstructions: string | undefined;
 }
 
+export interface FormatPromptInput {
+	ledgerText: string;
+	projectRoot: string;
+	continuationDocPath: string;
+	existingContinuationDoc: string | undefined;
+	agentGuidePath: string;
+	existingAgentGuide: string | undefined;
+	customInstructions: string | undefined;
+	fileOps: FileOpsSnapshot;
+}
+
 export interface CompiledPrompt {
 	systemPrompt: string;
 	userPrompt: string;
@@ -102,7 +118,7 @@ export type ContinuationArtifactStatus = "pending" | "modeled" | "aborted";
 export type ContinuationPromptStatus = "pending" | "sent" | "not-requested" | "failed";
 export type ContinuationResumeStatus = "not-requested" | "pending" | "running" | "completed" | "failed" | "aborted";
 export type ContinuationCompactionProofStatus = "pending" | "verified" | "failed";
-export type ContinuationSynthesisFailureStage = "history-model" | "history-artifact" | "split-model" | "split-prefix" | "unknown";
+export type ContinuationSynthesisFailureStage = "history-model" | "history-artifact" | "format-model" | "format-artifact" | "split-model" | "split-prefix" | "unknown";
 export type ContinuationSyncStatus = "off" | "pending" | "updated" | "unchanged" | "failed" | "no-replacement";
 export type ContinuationDocumentSyncTarget = "continuation-doc" | "agent-guide";
 

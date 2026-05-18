@@ -537,7 +537,11 @@ test("session_before_compact and session_compact write configured documents only
 	const faux = registerFauxProvider();
 	try {
 		writeAlwaysSyncConfig(cwd);
-		faux.setResponses([fauxAssistantMessage(continuationArtifactJson("# Agent Guide\n\nDurable rule.\n")), fauxAssistantMessage("raw split prefix")]);
+		faux.setResponses([
+			fauxAssistantMessage("ledger text"),
+			fauxAssistantMessage("raw split prefix"),
+			fauxAssistantMessage(continuationArtifactJson("# Agent Guide\n\nDurable rule.\n")),
+		]);
 		const pi = createFakePi(cwd);
 		const ctx = createCommandContext(cwd, async () => undefined);
 		ctx.model = faux.models[0];
@@ -589,12 +593,12 @@ test("session_before_compact fails closed when ledger synthesis cannot authentic
 	}
 });
 
-test("session_before_compact fails closed when history artifacts are malformed", async () => {
+test("session_before_compact fails closed when formatted history artifacts are malformed", async () => {
 	const cwd = mkdtempSync(join(tmpdir(), "pi-continue-hard-fail-"));
 	const faux = registerFauxProvider();
 	try {
 		writeAlwaysSyncConfig(cwd);
-		faux.setResponses([fauxAssistantMessage("not json")]);
+		faux.setResponses([fauxAssistantMessage("ledger text"), fauxAssistantMessage("not json")]);
 		const pi = createFakePi(cwd);
 		const ctx = createCommandContext(cwd, async () => undefined);
 		ctx.model = faux.models[0];
@@ -614,7 +618,7 @@ test("session_before_compact fails closed when split-prefix output is empty", as
 	const faux = registerFauxProvider();
 	try {
 		writeAlwaysSyncConfig(cwd);
-		faux.setResponses([fauxAssistantMessage(continuationArtifactJson()), fauxAssistantMessage("\n\t")]);
+		faux.setResponses([fauxAssistantMessage("ledger text"), fauxAssistantMessage("\n\t"), fauxAssistantMessage(continuationArtifactJson())]);
 		const pi = createFakePi(cwd);
 		const ctx = createCommandContext(cwd, async () => undefined);
 		ctx.model = faux.models[0];

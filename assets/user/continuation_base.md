@@ -7,11 +7,11 @@ Write continuation artifacts for the next Pi turn after compaction.
 - Preserve what still changes what the next agent should do, avoid, ask, validate, inspect, update durably, or remember as reusable operating guidance.
 - Before synthesizing conclusions, check the supplied context for user intent, tool-proven state, conflicts, and blockers.
 - Treat transcript and tool history as noisy evidence, not as content to replay.
-- Emit one current Pi Continuation Ledger in the strict JSON schema requested by the system prompt. This is a reducer, not a chronological summary or a stacked layer over a previous ledger.
+- Emit one current Pi Continuation Ledger in compact human-readable form. This is a reducer, not a chronological summary or a stacked layer over a previous ledger.
 - Preserve the initiative spine across compactions: durable purpose, why the user cares, definition of done, active request recency, plan of record, sticky constraints, durable decisions, dormant-but-important context, active risks, and rejected-path rationale.
 - Apply the Evidence Gate: keep a detail only when it changes continuation behavior, prevents a wrong action, proves current state, records a blocker, encodes an explicit or repeated user requirement, or captures durable learning that should survive compaction.
 - Use only supplied context and explicit runtime sections; do not invent missing progress, validation, file contents, configured agent-guide changes, control-plane writes, or root cause.
-- Synthesize everything that still applies into the structured JSON fields requested by the system prompt.
+- Synthesize everything that still applies into the ledger fields requested by the system prompt.
 - Make the artifacts cohesive: the brief, document, durable promotions, and agent-guide candidate should use the same facts, vocabulary, constraints, and current truth.
 - Include enduring requirements: absolute constraints, evergreen preferences, stable context, reusable user feedback, and relevant lasting learning.
 - Convert repeated friction into one durable rule; do not list each occurrence.
@@ -94,9 +94,9 @@ Use the structured fields as semantic slots, not as a transcript template:
 
 ## Output
 
-- Return only the strict JSON artifact object requested by the system prompt.
-- Fill every required structured field with an array, using an empty array only when no item passes the Evidence Gate. Do not leave `recencyLedger` empty; use `unknown` when recency cannot be resolved from supplied evidence.
-- Put a full configured-guide replacement in `agentGuideMarkdown` only when warranted; otherwise use null.
+- Return only the compact continuation ledger requested by the system prompt; do not output JSON.
+- Fill useful ledger fields with concise bullets. Omit empty fields when no item passes the Evidence Gate, but do not leave `recencyLedger` empty; use `unknown` when recency cannot be resolved from supplied evidence.
+- Include a full configured-guide replacement candidate only when warranted; otherwise state that no guide replacement is warranted.
 
 ## Quality bar
 

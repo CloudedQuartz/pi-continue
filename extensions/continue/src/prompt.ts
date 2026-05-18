@@ -1,4 +1,4 @@
-import type { CompiledPrompt, FileOpsSnapshot, HistoryPromptAssets, HistoryPromptInput, SplitPromptAssets, SplitPromptInput } from "./types.ts";
+import type { CompiledPrompt, FileOpsSnapshot, FormatPromptAssets, FormatPromptInput, HistoryPromptAssets, HistoryPromptInput, SplitPromptAssets, SplitPromptInput } from "./types.ts";
 
 function renderTag(tag: string, content: string | undefined): string {
 	const normalized = content && content.trim().length > 0 ? content.trim() : "(none)";
@@ -32,6 +32,29 @@ export function compileHistoryPrompt(assets: HistoryPromptAssets, input: History
 		sources: {
 			system: assets.system.sourcePath,
 			baseUser: assets.baseUser.sourcePath,
+			scenarioUser: assets.scenarioUser.sourcePath,
+		},
+	};
+}
+
+/** Compile the artifact-formatting pass prompt from externalized assets plus runtime material. */
+export function compileFormatPrompt(assets: FormatPromptAssets, input: FormatPromptInput): CompiledPrompt {
+	const sections = [
+		renderTag("format-task", assets.scenarioUser.content),
+		renderTag("project-root", input.projectRoot),
+		renderTag("continuation-doc-path", input.continuationDocPath),
+		renderTag("existing-continuation-md", input.existingContinuationDoc),
+		renderTag("agent-guide-path", input.agentGuidePath),
+		renderTag("existing-agent-guide", input.existingAgentGuide),
+		renderTag("continuation-ledger", input.ledgerText),
+		renderTag("file-operations", renderFileOps(input.fileOps)),
+		renderTag("custom-instructions", input.customInstructions),
+	];
+	return {
+		systemPrompt: assets.system.content.trim(),
+		userPrompt: sections.join("\n\n"),
+		sources: {
+			system: assets.system.sourcePath,
 			scenarioUser: assets.scenarioUser.sourcePath,
 		},
 	};
