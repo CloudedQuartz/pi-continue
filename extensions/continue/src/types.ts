@@ -238,6 +238,7 @@ export interface PiCompactionSettings {
 
 export interface PreviewPayload {
 	history: CompiledPrompt;
+	format?: CompiledPrompt;
 	split: CompiledPrompt | undefined;
 	scenario: HistoryScenario;
 	isSplitTurn: boolean;

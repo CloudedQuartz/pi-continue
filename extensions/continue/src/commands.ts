@@ -1,7 +1,7 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { loadHistoryPromptAssets, loadSplitPromptAssets } from "./assets.ts";
+import { loadFormatPromptAssets, loadHistoryPromptAssets, loadSplitPromptAssets } from "./assets.ts";
 import { snapshotFileOperations } from "./compaction-preparation.ts";
 import { DEFAULT_CONTINUE_CONFIG, loadContinuationConfig, loadScopeConfig, patchContinuationConfig, resetContinuationConfig } from "./config.ts";
 import { showLatestContinuationLedger } from "./ledger-viewer.ts";
@@ -9,7 +9,7 @@ import { showScrollableTextOverlay } from "./text-viewer.ts";
 import { readEffectivePiCompactionSettings } from "./pi-settings.ts";
 import { renderHandoffTrigger, updateHandoffTriggerFromDialog } from "./pi-threshold-settings.ts";
 import { loadPiInternals } from "./pi-internals.ts";
-import { compileHistoryPrompt, compileSplitPrompt, renderPromptPreview } from "./prompt.ts";
+import { compileFormatPrompt, compileHistoryPrompt, compileSplitPrompt, renderPromptPreview } from "./prompt.ts";
 import { resolveProjectContext } from "./project.ts";
 import { resolveSummarizerModel } from "./model-settings.ts";
 import { getLatestContinuationEvent, getLatestContinuationLedger, type ContinuationRuntimeState } from "./runtime.ts";
@@ -38,10 +38,13 @@ async function requireUi(ctx: ExtensionCommandContext): Promise<boolean> {
 	return commandHasUi(ctx);
 }
 
+const FORMAT_PREVIEW_LEDGER_PLACEHOLDER = "Preview placeholder: at runtime this is replaced with the history-pass Continuation Ledger model output. /continue preview does not run the formatter model.";
+
 async function buildPromptPreviewPayload(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 	customInstructions: string | undefined,
+	options: { includeFormatter?: boolean } = {},
 ): Promise<PreviewPayload | undefined> {
 	const initialProjectContext = await resolveProjectContext(pi, ctx.cwd, DEFAULT_CONTINUE_CONFIG.continuationDocPath);
 	const config = loadContinuationConfig(initialProjectContext.projectRoot);
@@ -72,6 +75,18 @@ async function buildPromptPreviewPayload(
 		customInstructions,
 		fileOps,
 	});
+	const format = options.includeFormatter
+		? compileFormatPrompt(loadFormatPromptAssets(projectContext.projectRoot, config.promptOverridePolicy), {
+				ledgerText: FORMAT_PREVIEW_LEDGER_PLACEHOLDER,
+				projectRoot: projectContext.projectRoot,
+				continuationDocPath: projectContext.continuationDocPath,
+				existingContinuationDoc: projectContext.existingContinuationDoc,
+				agentGuidePath: projectContext.agentGuidePath,
+				existingAgentGuide: projectContext.existingAgentGuide,
+				customInstructions,
+				fileOps,
+			})
+		: undefined;
 	const split = preparation.isSplitTurn && preparation.turnPrefixMessages.length > 0
 		? compileSplitPrompt(loadSplitPromptAssets(projectContext.projectRoot, config.promptOverridePolicy), {
 				projectRoot: projectContext.projectRoot,
@@ -82,6 +97,7 @@ async function buildPromptPreviewPayload(
 		: undefined;
 	return {
 		history,
+		format,
 		split,
 		scenario,
 		isSplitTurn: preparation.isSplitTurn,
@@ -379,13 +395,14 @@ export async function runResetCommand(pi: ExtensionAPI, ctx: ExtensionCommandCon
 /** Preview handoff prompts. */
 export async function runPreviewCommand(pi: ExtensionAPI, ctx: ExtensionCommandContext, args: string | undefined): Promise<void> {
 	if (!(await requireUi(ctx))) return;
-	const payload = await buildPromptPreviewPayload(pi, ctx, joinArgs(args));
+	const payload = await buildPromptPreviewPayload(pi, ctx, joinArgs(args), { includeFormatter: true });
 	if (!payload) {
 		ctx.ui.notify("No handoff preview is available.", "warning");
 		return;
 	}
 	const sections = [
 		renderPromptPreview(`History prompt (${payload.scenario})`, payload.history),
+		payload.format ? renderPromptPreview("Formatter prompt", payload.format) : undefined,
 		payload.split ? renderPromptPreview("Split-prefix prompt", payload.split) : undefined,
 	].filter((section): section is string => section !== undefined);
 	await showText(ctx, "handoff prompt preview", sections.join("\n\n---\n\n"));
